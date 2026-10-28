@@ -9,7 +9,7 @@ A sample custom Synapse **resolver** that shows how to plug your own value resol
 | Path | Description |
 | --- | --- |
 | `CustomResolverProject/src/main/java/org/example/resolvers/TestResolver.java` | The resolver. Implements `org.apache.synapse.commons.resolvers.Resolver`. |
-| `CustomResolverProject/pom.xml` | Maven build. Depends on `synapse-commons` `2.1.7-wso2v227`. |
+| `CustomResolverProject/pom.xml` | Maven build. Depends on `synapse-commons` `4.0.0-wso2v268` (MI 4.x line). |
 
 ## How Synapse finds custom resolvers
 
@@ -27,7 +27,7 @@ with the fully qualified class name as its content:
 org.example.resolvers.TestResolver
 ```
 
-> **Note:** This project does not include that file yet, so add it under `src/main/resources/META-INF/services/` before building.
+This project includes it in `src/main/resources/META-INF/services/`.
 
 ## Build
 
@@ -40,9 +40,19 @@ mvn clean package
 
 1. Copy the JAR from `CustomResolverProject/target/` to `<MI_HOME>/lib`.
 2. Restart the server.
-3. Reference the resolver in a configuration value with the `$CUSTOM_` prefix, for example `$CUSTOM_TestResolver:abc`.
 
-Check the exact syntax supported by your MI version against `ResolverFactory` in [wso2-synapse](https://github.com/wso2/wso2-synapse/blob/master/modules/commons/src/main/java/org/apache/synapse/commons/resolvers/ResolverFactory.java).
+## Tested behaviour
+
+Tested against `ResolverFactory` from `synapse-commons` `4.0.0-wso2v268`:
+
+| Input | Resolver used | Result |
+| --- | --- | --- |
+| `$CUSTOM_TestResolver:abc` | `DefaultResolver` | `$CUSTOM_TestResolver:abc` (unchanged) |
+| `$CUSTOM_TestResolver:x$CUSTOM_TestResolver:abc` | `TestResolver` | `pqr` |
+
+`ResolverFactory` finds `TestResolver` through `ServiceLoader`, but for `$CUSTOM_` values it calls `matcher.find()` a second time and passes the **second** match's value to the resolver. A single `$CUSTOM_Name:value` therefore falls back to the default resolver. Check the behaviour of your MI version against [`ResolverFactory`](https://github.com/wso2/wso2-synapse/blob/master/modules/commons/src/main/java/org/apache/synapse/commons/resolvers/ResolverFactory.java) before relying on it.
+
+> Older `synapse-commons` `2.1.7-wso2v227` splits the class name with `split(".")`, which fails with `ArrayIndexOutOfBoundsException` as soon as any external resolver is on the classpath. Use the MI 4.x line.
 
 ## License
 
